@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Production Quote & Order App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <div id="notification-container"></div>
+
+    <div class="min-h-screen flex flex-col items-center p-4 sm:p-6 md:p-8" dir="ltr">
+        <div class="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <header class="bg-slate-800 text-white p-5 flex flex-col sm:flex-row justify-between items-center border-b-4 border-cyan-400">
+                <div class="flex items-center gap-3 mb-4 sm:mb-0">
+                    <i data-lucide="shopping-cart" class="w-8 h-8 text-cyan-400"></i>
+                    <h1 class="text-2xl font-bold">Production Management System</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-slate-400">View Mode:</span>
+                     <div class="flex items-center bg-slate-700 rounded-full p-1">
+                        <button id="client-view-btn" class="px-3 py-1 text-sm rounded-full flex items-center gap-1 bg-cyan-500">
+                            <i data-lucide="user" class="w-4 h-4"></i> Client
+                        </button>
+                        <button id="manager-view-btn" class="px-3 py-1 text-sm rounded-full flex items-center gap-1">
+                            <i data-lucide="key" class="w-4 h-4"></i> Manager
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <main class="p-6 sm:p-8 md:p-10">
+                <!-- Welcome Screen -->
+                <div id="welcome-screen" class="text-center p-10">
+                    <h2 class="text-2xl font-semibold text-slate-700 mb-4">Welcome</h2>
+                    <p class="text-slate-500 mb-6">Click the button to simulate receiving a new order from the Make.com system</p>
+                    <button id="load-order-btn" class="bg-purple-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center gap-2 mx-auto text-lg shadow-lg hover:shadow-purple-500/50">
+                       <i data-lucide="external-link" class="w-5 h-5"></i> Load Order from Make.com
+                    </button>
+                </div>
+
+                <!-- Order Form Screen -->
+                <div id="order-screen" class="hidden animate-fade-in">
+                    <!-- Content will be injected by JS -->
+                </div>
+
+                <!-- Quote Screen -->
+                <div id="quote-screen" class="hidden animate-fade-in">
+                     <!-- Content will be injected by JS -->
+                </div>
+
+                <!-- Receipt Screen -->
+                <div id="receipt-screen" class="hidden animate-fade-in">
+                     <!-- Content will be injected by JS -->
+                </div>
+
+            </main>
+        </div>
+        <footer class="text-center text-slate-500 mt-8 text-sm">
+            <p>&copy; 2025 Production Management System. Developed by Gemini.</p>
+        </footer>
+    </div>
+
+
+    <script>
+        // --- DATA CATALOG ---
+        const PRODUCT_CATALOG = {
+          "led-fixture": { name_en: "LED PAR Fixture", category: "Lighting", price: 150, unit: "unit" },
+          "moving-head": { name_en: "Moving Head", category: "Lighting", price: 400, unit: "unit" },
+          "wash-light": { name_en: "Wash Light", category: "Lighting", price: 200, unit: "unit" },
+          "effect-light": { name_en: "Effect Light", category: "Lighting", price: 220, unit: "unit" },
+          "wireless-led-tube": { name_en: "Wireless LED Tube (Astera)", category: "Lighting", price: 150, unit: "unit" },
+          "conventional-light": { name_en: "Conventional Light (Profile/Leko)", category: "Lighting", price: 200, unit: "unit" },
+          "lighting-console-advanced": { name_en: "Advanced Lighting Console", category: "Lighting", price: 300, unit: "unit" },
+          "smoke-machine": { name_en: "Smoke Machine", category: "Lighting", price: 250, unit: "unit" },
+          "haze-machine": { name_en: "Haze Machine", category: "Lighting", price: 300, unit: "unit" },
+          "lighting-stand": { name_en: "Lighting Stand / Lift", category: "Lighting", price: 200, unit: "unit" },
+          "speaker-powered-500w": { name_en: '500W Powered Speaker', category: "Sound", price: 220, unit: "unit" },
+          "subwoofer-15": { name_en: '15" Subwoofer', category: "Sound", price: 250, unit: "unit" },
+          "stage-monitor": { name_en: "Stage Monitor", category: "Sound", price: 250, unit: "unit" },
+          "mic-wireless-pro": { name_en: "Professional Wireless Mic", category: "Sound", price: 120, unit: "unit" },
+          "mic-wired-sm58": { name_en: "Wired Microphone (Shure SM58)", category: "Sound", price: 80, unit: "unit" },
+          "mixer-12ch": { name_en: "12-Channel Mixer", category: "Sound", price: 199, unit: "unit" },
+          "sound-console-digital": { name_en: "Large Digital Sound Console", category: "Sound", price: 1200, unit: "unit" },
+          "led-screen-sqm": { name_en: 'LED Screen (per sq. meter)', category: "Video", price: 500, unit: 'sq. meter' },
+          "projector-5000-lumens": { name_en: "Projector 5000 Lumens HD", category: "Video", price: 550, unit: "unit" },
+          "projection-screen": { name_en: "Tripod Projection Screen", category: "Video", price: 150, unit: "unit" },
+          "tv-65": { name_en: '65" TV on Stand', category: "Video", price: 690, unit: "unit" },
+          "tv-85": { name_en: '85" TV on Stand', category: "Video", price: 1600, unit: "unit" },
+          "video-switcher": { name_en: "Video Switcher", category: "Video", price: 500, unit: "unit" },
+          "resolume-pc": { name_en: "Resolume/VJ PC", category: "Video", price: 800, unit: "unit" },
+          "stage-deck-2x1": { name_en: "Modular Stage Deck (2x1m)", category: "Staging & Rigging", price: 300, unit: "unit" },
+          "truss-meter": { name_en: "Truss (per meter)", category: "Staging & Rigging", price: 150, unit: "meter" },
+          "chain-hoist": { name_en: "Electric Chain Hoist", category: "Staging & Rigging", price: 500, unit: "unit" },
+          "crowd-barrier": { name_en: "Crowd Barrier", category: "Staging & Rigging", price: 30, unit: "unit" },
+          "generator-small": { name_en: "Small Generator (up to 3.5kW)", category: "Power", price: 500, unit: "unit" },
+          "generator-large": { name_en: "Large Generator (30kW+)", category: "Power", price: 2000, unit: "unit" },
+          "distro-board": { name_en: "Distribution Board", category: "Power", price: 300, unit: "unit" },
+          "cable-protector": { name_en: "Cable Protector", category: "Power", price: 50, unit: 'meter' },
+          "stagehand": { name_en: "Stagehand", category: "Personnel", price: 600, unit: "work day" },
+          "rigger": { name_en: "Rigger", category: "Personnel", price: 1500, unit: "work day" },
+          "sound-tech": { name_en: "Sound Technician", category: "Personnel", price: 1500, unit: "work day" },
+          "lighting-tech": { name_en: "Lighting Technician", category: "Personnel", price: 1500, unit: "work day" },
+          "video-tech": { name_en: "Video Technician", category: "Personnel", price: 1500, unit: "work day" },
+          "project-manager": { name_en: "Project Manager", category: "Personnel", price: 3000, unit: "work day" },
+          "safety-manager": { name_en: "Safety Manager", category: "Personnel", price: 2500, unit: "work day" }
+        };
+
+        // --- APPLICATION STATE ---
+        let state = {
+            currentScreen: 'welcome-screen',
+            isManagerView: false,
+            orderData: null,
+            quote: {
+                items: [],
+                status: 'draft', // pre-draft, draft, review, approved, accepted
+                totals: { subtotal: 0, vat: 0, total: 0 }
+            },
+            isLoading: false
+        };
+
+        // --- DOM Elements ---
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const orderScreen = document.getElementById('order-screen');
+        const quoteScreen = document.getElementById('quote-screen');
+        const receiptScreen = document.getElementById('receipt-screen');
+        const allScreens = [welcomeScreen, orderScreen, quoteScreen, receiptScreen];
+        
+        const clientViewBtn = document.getElementById('client-view-btn');
+        const managerViewBtn = document.getElementById('manager-view-btn');
+
+        // --- RENDER & UPDATE FUNCTIONS ---
+
+        function showScreen(screenId) {
+            allScreens.forEach(screen => screen.classList.add('hidden'));
+            document.getElementById(screenId)?.classList.remove('hidden');
+            state.currentScreen = screenId;
+        }
+
+        function calculateTotals() {
+            const subtotal = state.quote.items.reduce((acc, item) => {
+                const product = PRODUCT_CATALOG[item.id];
+                return acc + (product ? product.price * item.quantity : 0);
+            }, 0);
+            const vat = subtotal * 0.17;
+            const total = subtotal + vat;
+            state.quote.totals = { subtotal, vat, total };
+        }
+
+        function renderQuoteTable() {
+            calculateTotals();
+            const { items, totals } = state.quote;
+
+            const tableHeader = `
+                <thead class="bg-slate-200">
+                    <tr>
+                        <th class="p-3 text-left font-semibold text-slate-600">Category</th>
+                        <th class="p-3 text-left font-semibold text-slate-600">Item</th>
+                        <th class="p-3 text-center font-semibold text-slate-600">Unit Price</th>
+                        <th class="p-3 text-center font-semibold text-slate-600">Quantity</th>
+                        <th class="p-3 text-right font-semibold text-slate-600">Total</th>
+                        ${state.isManagerView ? '<th class="p-3 text-center font-semibold text-slate-600">Actions</th>' : ''}
+                    </tr>
+                </thead>
+            `;
+
+            const tableBody = items.map((item, index) => {
+                const product = PRODUCT_CATALOG[item.id];
+                if (!product) return '';
+                const totalItemPrice = product.price * item.quantity;
+                return `
+                    <tr class="border-b border-slate-200 hover:bg-slate-50">
+                        <td class="p-3">${product.category}</td>
+                        <td class="p-3 font-medium text-slate-800">${product.name_en}</td>
+                        <td class="p-3 text-center">₪${product.price.toFixed(2)}</td>
+                        <td class="p-3 text-center">
+                            ${state.isManagerView ? 
+                                `<input type="number" value="${item.quantity}" onchange="updateItemQuantity(${index}, this.value)" class="w-20 p-1 border border-slate-300 rounded-md text-center">` :
+                                item.quantity
+                            }
+                        </td>
+                        <td class="p-3 text-right font-semibold">₪${totalItemPrice.toFixed(2)}</td>
+                        ${state.isManagerView ? 
+                            `<td class="p-3 text-center">
+                                <button onclick="removeItem(${index})" class="text-red-500 hover:text-red-700">
+                                    <i data-lucide="x-circle" class="w-5 h-5"></i>
+                                </button>
+                            </td>` : ''
+                        }
+                    </tr>
+                `;
+            }).join('');
+
+            const tableFooter = `
+                <tfoot>
+                    <tr class="bg-slate-50 font-bold">
+                        <td colspan="${state.isManagerView ? 4 : 3}" class="p-3 text-left">Subtotal:</td>
+                        <td class="p-3 text-right">₪${totals.subtotal.toFixed(2)}</td>
+                        ${state.isManagerView ? '<td></td>' : ''}
+                    </tr>
+                    <tr class="bg-slate-50 font-bold">
+                        <td colspan="${state.isManagerView ? 4 : 3}" class="p-3 text-left">VAT (17%):</td>
+                        <td class="p-3 text-right">₪${totals.vat.toFixed(2)}</td>
+                        ${state.isManagerView ? '<td></td>' : ''}
+                    </tr>
+                    <tr class="bg-slate-200 text-lg font-extrabold text-slate-800">
+                        <td colspan="${state.isManagerView ? 4 : 3}" class="p-4 text-left">Grand Total:</td>
+                        <td class="p-4 text-right">₪${totals.total.toFixed(2)}</td>
+                        ${state.isManagerView ? '<td></td>' : ''}
+                    </tr>
+                </tfoot>
+            `;
+
+            return `
+                <div class="mt-6 border border-slate-200 rounded-lg overflow-hidden">
+                    <table class="w-full">${tableHeader}<tbody>${tableBody}</tbody>${tableFooter}</table>
+                </div>
+            `;
+        }
+        
+        function renderQuoteScreen() {
+            let content = `<h2 class="text-2xl font-semibold text-slate-700 mb-4">Quote for: ${state.orderData?.clientName || 'New Client'}</h2>`;
+
+            if (state.isManagerView) {
+                if (state.quote.status === 'draft') {
+                    content += `
+                        <div class="bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-6 rounded-lg my-6 text-center shadow">
+                            <h3 class="font-bold text-xl mb-2">Step 1: Run AI to Generate Quote</h3>
+                            <p class="mb-2">The client has sent the event description and a venue image.</p>
+                             ${state.orderData.imageFile ? `<p class="text-sm font-semibold mb-4">Image attached: <span class='font-mono'>${state.orderData.imageFile.name}</span></p>` : ''}
+                            <p class="mb-4">Click the button for the AI to analyze the information and generate a detailed quote.</p>
+                            <button id="generate-ai-quote-btn" class="bg-amber-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-amber-600 transition-all duration-300 flex items-center gap-2 mx-auto disabled:bg-slate-400 disabled:cursor-wait">
+                                ${state.isLoading ? 
+                                    '<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> Processing...' : 
+                                    '<i data-lucide="bot" class="w-5 h-5"></i> Generate Quote with AI (incl. Image Analysis)'
+                                }
+                            </button>
+                        </div>
+                    `;
+                } else if (state.quote.status === 'review') {
+                     content += renderQuoteTable();
+                     content += `
+                        <div class="bg-fuchsia-100 border-l-4 border-fuchsia-500 text-fuchsia-800 p-6 rounded-lg my-6 shadow">
+                            <h3 class="font-bold text-xl mb-2">Step 2: Manager Review and Edit</h3>
+                            <p class="mb-4">This is the AI-generated quote. You can edit quantities, remove items, or add new ones before sending to the client.</p>
+                            <div class="mt-6 flex gap-2">
+                                <select id="add-item-select" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500">
+                                    <option value="">Select an item to add...</option>
+                                    ${Object.entries(PRODUCT_CATALOG).map(([id, product]) => `<option value="${id}">${product.name_en} (${product.category})</option>`).join('')}
+                                </select>
+                                <button id="add-item-btn" class="bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700 transition-colors">Add</button>
+                            </div>
+                            <div class="mt-6 flex justify-between items-center">
+                                <button id="approve-quote-btn" class="bg-green-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-600 transition-all duration-300 flex items-center gap-2 text-lg shadow-lg hover:shadow-green-500/50">
+                                   <i data-lucide="check-circle" class="w-5 h-5"></i> Approve and Send to Client
+                               </button>
+                            </div>
+                        </div>
+                     `;
+                }
+            } else { // Client View
+                 if (state.quote.status === 'approved') {
+                    content += renderQuoteTable();
+                    content += `
+                        <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-6 rounded-lg my-6 shadow">
+                             <h3 class="font-bold text-xl mb-2">Your Quote is Ready!</h3>
+                             <p class="mb-4">Hello ${state.orderData.clientName}, your quote is ready. Please review the details and approve to continue.</p>
+                             <button id="accept-quote-btn" class="bg-blue-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-600 transition-all duration-300 flex items-center gap-2 text-lg shadow-lg hover:shadow-blue-500/50">
+                                <i data-lucide="check-circle" class="w-5 h-5"></i> I Approve This Quote
+                            </button>
+                        </div>
+                    `;
+                 } else if (state.quote.status === 'accepted') {
+                     content += renderQuoteTable();
+                     content += `
+                        <div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-6 rounded-lg my-6 shadow text-center">
+                            <i data-lucide="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4"></i>
+                            <h3 class="font-bold text-2xl">Quote Approved!</h3>
+                            <p>Thank you! A representative will contact you shortly. You can now view your receipt.</p>
+                        </div>
+                     `;
+                 } else {
+                     content += `<div class="text-center p-10 text-slate-500">Awaiting manager's approval for the quote.</div>`
+                 }
+            }
+            
+            quoteScreen.innerHTML = content;
+            addQuoteScreenEventListeners();
+            lucide.createIcons();
+        }
+
+        function renderOrderScreen() {
+             const initialItemsHtml = state.quote.items.map(item => `
+                <li key="${item.id}">${PRODUCT_CATALOG[item.id].name_en} (x${item.quantity})</li>
+             `).join('');
+
+             orderScreen.innerHTML = `
+                <h2 class="text-2xl font-semibold text-slate-700 mb-6 flex items-center gap-2"><i data-lucide="file-text"></i> Complete Order Details</h2>
+                <div class="bg-slate-50 p-4 rounded-lg mb-6 border border-slate-200">
+                    <h3 class="font-bold text-slate-600 mb-2">Initial Equipment List:</h3>
+                    <ul class="list-disc list-inside text-slate-500 space-y-1">${initialItemsHtml}</ul>
+                </div>
+                <form id="order-form" class="space-y-6">
+                    <div>
+                        <label for="eventDescription" class="block text-sm font-medium text-slate-600 mb-1">Additional Event Description</label>
+                        <textarea name="eventDescription" id="eventDescription" rows="4" required class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" placeholder="Please describe the event, highlighting important details for the AI. e.g., 'This is an outdoor concert, a generator is crucial. The stage is very wide.'"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-2">Upload Stage/Venue Image</label>
+                        <div id="file-dropzone" class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer hover:border-cyan-500 hover:bg-slate-50 transition">
+                            <input type="file" id="file-input" accept="image/*" class="hidden" />
+                            <i data-lucide="image" class="mx-auto text-slate-400 w-12 h-12 mb-2"></i>
+                            <p class="text-slate-500">Click here to upload an image</p>
+                            <p class="text-xs text-slate-400 mt-1">The AI will use the image to understand the venue's size and type</p>
+                        </div>
+                        <div id="file-feedback" class="mt-4 text-center"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="clientName" class="block text-sm font-medium text-slate-600 mb-1">Full Name</label>
+                            <input type="text" name="clientName" id="clientName" required class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" />
+                        </div>
+                        <div>
+                            <label for="clientPhone" class="block text-sm font-medium text-slate-600 mb-1">Contact Phone</label>
+                            <input type="tel" name="clientPhone" id="clientPhone" required class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition" />
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <button type="submit" class="bg-cyan-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-cyan-600 transition-all duration-300 flex items-center gap-2 text-lg shadow-lg hover:shadow-cyan-500/50">
+                            <i data-lucide="send" class="w-5 h-5"></i> Update Order & Send to Manager
+                        </button>
+                    </div>
+                </form>
+             `;
+             addOrderScreenEventListeners();
+             lucide.createIcons();
+        }
+        
+        function renderReceiptScreen() {
+             const receiptData = { issueDate: new Date().toLocaleDateString('en-GB') };
+             receiptScreen.innerHTML = `
+                <div class="p-8 border border-slate-300 rounded-lg bg-white shadow-lg">
+                    <div class="flex justify-between items-start pb-6 border-b-2 border-slate-200">
+                        <div>
+                            <h2 class="text-3xl font-bold text-slate-800">Tax Invoice</h2>
+                            <p class="text-slate-500">Invoice #: ${Math.floor(1000 + Math.random() * 9000)}</p>
+                            <p class="text-slate-500">Issue Date: ${receiptData.issueDate}</p>
+                        </div>
+                        <div class="text-right">
+                            <h3 class="text-xl font-bold">The Company Inc.</h3>
+                            <p class="text-slate-600">1 HaMeyasdim St, Tel Aviv</p>
+                            <p class="text-slate-600">Company ID 512345678</p>
+                        </div>
+                    </div>
+                    <div class="my-6">
+                        <h4 class="font-semibold text-slate-600 mb-2">Bill To:</h4>
+                        <p class="font-bold text-slate-800">${state.orderData.clientName}</p>
+                        <p class="text-slate-600">${state.orderData.clientPhone}</p>
+                    </div>
+                    ${renderQuoteTable()}
+                    <div class="mt-8 flex justify-between items-center">
+                        <p class="text-sm text-slate-500">Thank you for your business!</p>
+                        <button id="send-receipt-btn" class="bg-purple-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-600 transition-all duration-300 flex items-center gap-2">
+                            <i data-lucide="send" class="w-4 h-4"></i> Send to Accounting (Make)
+                        </button>
+                    </div>
+                </div>
+             `;
+             addReceiptScreenEventListeners();
+             lucide.createIcons();
+        }
+
+        // --- EVENT HANDLERS ---
+        
+        function handleLoadInitialOrder() {
+            const initialItems = [
+              { id: "led-screen-sqm", quantity: 15 },
+              { id: "speaker-powered-500w", quantity: 2 },
+              { id: "stage-deck-2x1", quantity: 8 },
+            ];
+            state.quote.items = initialItems;
+            state.quote.status = 'pre-draft';
+            renderOrderScreen();
+            showScreen('order-screen');
+            showNotification("Initial equipment list loaded from Make.com. The client is requested to add details and an image.", 'success', 6000);
+        }
+
+        function handleOrderFormSubmit(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            state.orderData = {
+                ...state.orderData,
+                clientName: formData.get('clientName'),
+                clientPhone: formData.get('clientPhone'),
+                eventDescription: formData.get('eventDescription'),
+            };
+            state.quote.status = 'draft';
+            renderQuoteScreen();
+            showScreen('quote-screen');
+            showNotification("Order updated and sent to manager for AI processing.", "success");
+            setTimeout(() => {
+                showNotification("Manager, a new order is ready for quote generation via AI.", "info", 6000)
+            }, 1000);
+        }
+        
+        async function handleAiGenerate() {
+            state.isLoading = true;
+            renderQuoteScreen(); // Re-render to show loader
+
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 2500));
+            
+            // Mocked AI logic
+            const newItems = new Map();
+            state.quote.items.forEach(item => newItems.set(item.id, { ...item }));
+            
+            const addOrUpdateItem = (id, qty) => {
+                if (newItems.has(id)) {
+                    newItems.set(id, { id, quantity: Math.max(newItems.get(id).quantity, qty) });
+                } else {
+                    newItems.set(id, { id, quantity: qty });
+                }
+            };
+            const description = state.orderData.eventDescription.toLowerCase();
+            if (description.includes("lighting")) addOrUpdateItem("lighting-tech", 1);
+            if (description.includes("band") || description.includes("sound")) { addOrUpdateItem("sound-tech", 1); addOrUpdateItem("mic-wireless-pro", 4); }
+            if (state.orderData.imageBase64) {
+                showNotification("AI is analyzing the image...", "info");
+                addOrUpdateItem("stage-deck-2x1", 20); 
+                addOrUpdateItem("generator-large", 1);
+                addOrUpdateItem("truss-meter", 40);
+                addOrUpdateItem("rigger", 2);
+            }
+            addOrUpdateItem("stagehand", 4);
+            if (newItems.size > 5) addOrUpdateItem("project-manager", 1);
+            
+            state.quote.items = Array.from(newItems.values());
+            state.quote.status = 'review';
+            state.isLoading = false;
+            
+            renderQuoteScreen();
+            showNotification("Quote generated by AI, ready for manager review.", "success");
+        }
+        
+        function updateItemQuantity(index, value) {
+            const newQuantity = parseInt(value, 10);
+            if (!isNaN(newQuantity)) {
+                state.quote.items[index].quantity = Math.max(0, newQuantity);
+                renderQuoteScreen();
+            }
+        }
+
+        function removeItem(index) {
+            state.quote.items.splice(index, 1);
+            renderQuoteScreen();
+        }
+        
+        function handleAddItem() {
+            const select = document.getElementById('add-item-select');
+            const itemId = select.value;
+            if (!itemId) return;
+
+            const existingItem = state.quote.items.find(item => item.id === itemId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                state.quote.items.push({ id: itemId, quantity: 1 });
+            }
+            showNotification(`${PRODUCT_CATALOG[itemId].name_en} added to quote.`, 'success');
+            renderQuoteScreen();
+        }
+
+        function handleApproveQuote() {
+            state.quote.status = 'approved';
+            handleSendToMake(state, 'Quote For Approval');
+            switchView(false); // Switch to client view
+            showNotification("Quote approved and sent to client.", "success");
+        }
+
+        function handleAcceptQuote() {
+            state.quote.status = 'accepted';
+            renderReceiptScreen();
+            showScreen('receipt-screen');
+            showNotification("Thank you! We will contact you shortly to finalize the details.", "success");
+        }
+
+        function switchView(isManager) {
+            state.isManagerView = isManager;
+            clientViewBtn.classList.toggle('bg-cyan-500', !isManager);
+            managerViewBtn.classList.toggle('bg-amber-500', isManager);
+            
+            // Re-render current screen with the new view perspective
+            if (state.currentScreen === 'quote-screen') {
+                renderQuoteScreen();
+            }
+        }
+        
+        function handleSendToMake(payload, webhookName) {
+            console.log(`--- SIMULATING SENDING TO MAKE.COM (${webhookName}) ---`);
+            console.log(JSON.stringify(payload, null, 2));
+            showNotification(`Data successfully sent to ${webhookName} system.`);
+        }
+        
+        function showNotification(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('notification-container');
+            const notif = document.createElement('div');
+            const typeClasses = { success: "bg-green-500", info: "bg-blue-500", error: "bg-red-500" };
+            const icon = { success: "check-circle", info: "bot", error: "x-circle" }[type] || "check-circle";
+
+            notif.className = `fixed top-5 right-5 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 text-white transition-all duration-300 transform animate-fade-in ${typeClasses[type]}`;
+            notif.innerHTML = `
+                <i data-lucide="${icon}"></i>
+                <span>${message}</span>
+                <button class="absolute top-1 right-1 text-white/70 hover:text-white">&times;</button>
+            `;
+            notif.querySelector('button').onclick = () => notif.remove();
+            container.appendChild(notif);
+            lucide.createIcons();
+            setTimeout(() => notif.remove(), duration);
+        }
+
+        // --- EVENT LISTENER SETUP ---
+        function addOrderScreenEventListeners() {
+            document.getElementById('order-form').addEventListener('submit', handleOrderFormSubmit);
+            document.getElementById('file-dropzone').addEventListener('click', () => {
+                document.getElementById('file-input').click();
+            });
+            document.getElementById('file-input').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                const feedbackEl = document.getElementById('file-feedback');
+                if (file) {
+                    state.orderData.imageFile = file;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        state.orderData.imageBase64 = e.target.result.split(',')[1];
+                    };
+                    reader.readAsDataURL(file);
+                    feedbackEl.innerHTML = `<p class="font-semibold text-green-600">File <span class="font-mono">${file.name}</span> selected successfully.</p>`;
+                }
+            });
+        }
+        
+        function addQuoteScreenEventListeners() {
+            document.getElementById('generate-ai-quote-btn')?.addEventListener('click', handleAiGenerate);
+            document.getElementById('add-item-btn')?.addEventListener('click', handleAddItem);
+            document.getElementById('approve-quote-btn')?.addEventListener('click', handleApproveQuote);
+            document.getElementById('accept-quote-btn')?.addEventListener('click', handleAcceptQuote);
+        }
+
+        function addReceiptScreenEventListeners() {
+            document.getElementById('send-receipt-btn')?.addEventListener('click', () => handleSendToMake(state, 'New Receipt'));
+        }
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('load-order-btn').addEventListener('click', handleLoadInitialOrder);
+            clientViewBtn.addEventListener('click', () => switchView(false));
+            managerViewBtn.addEventListener('click', () => switchView(true));
+            lucide.createIcons();
+        });
+
+    </script>
+</body>
+</html>
